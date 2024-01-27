@@ -2,6 +2,9 @@ import mediapipe as mp
 import cv2
 import random
 import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
 
 def find_essential_matrix(left_camera_points, right_camera_points):
     """
@@ -41,8 +44,8 @@ c = []
 for i in range(1000):
     c.append([random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)])
 
-r_camera = cv2.imread('/Users/alirezaamiri/Desktop/1.png')
-l_camera = cv2.imread('/Users/alirezaamiri/Desktop/2.png')
+r_camera = cv2.imread('/Users/alirezaamiri/Desktop/11.jpg')
+l_camera = cv2.imread('/Users/alirezaamiri/Desktop/12.jpg')
 # Convert the frame to RGB
 rgb_r_camera = cv2.cvtColor(r_camera, cv2.COLOR_BGR2RGB)
 rgb_l_camera = cv2.cvtColor(l_camera, cv2.COLOR_BGR2RGB)
@@ -143,11 +146,15 @@ def triangulate_points(P1, P2, pts1, pts2):
     Returns:
     - 3D points in homogeneous coordinates.
     """
+
+    print(pts1.shape, pts2.shape)
     pts4D = cv2.triangulatePoints(P1, P2, pts1.T, pts2.T)
     pts3D = pts4D / pts4D[3]
     return pts3D[:3]
 
-K = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+K = np.array([[964.30008802 ,  0.   ,      643.55286762],
+ [  0.   ,      965.53528503, 350.29074919],
+ [  0.      ,     0.   ,        1.        ]])
 
 # Find rotation and translation from the essential matrix
 R1, R2, t = decompose_essential_matrix(E)
@@ -160,8 +167,33 @@ P1 = np.dot(K, np.hstack((np.eye(3), np.zeros((3, 1)))))
 P2 = np.dot(K, np.hstack((R1, t.reshape(3, 1))))  # Replace R1 and t with chosen values
 
 # Convert points to homogeneous coordinates
-pts1_homo = cv2.convertPointsToHomogeneous(np.array(rc_points))
-pts2_homo = cv2.convertPointsToHomogeneous(np.array(lc_points))
+pts1_homo = cv2.convertPointsToHomogeneous(np.array(rc_points))[:, 0, :2] # Extract x, y and transpose
+pts2_homo = cv2.convertPointsToHomogeneous(np.array(lc_points))[:, 0, :2]
+
 
 # Triangulate points
 points_3D = triangulate_points(P1, P2, pts1_homo, pts2_homo)
+
+X = points_3D[0]
+Y = points_3D[1]
+Z = points_3D[2]
+
+# Creating a 3D plot
+fig = plt.figure(figsize=(8, 6))
+ax = fig.add_subplot(111, projection='3d')
+
+# Scatter plot for 3D points
+ax.scatter(X, Y, Z)
+
+# Setting labels
+ax.set_xlabel('X Axis')
+ax.set_ylabel('Y Axis')
+ax.set_zlabel('Z Axis')
+
+# Setting title
+ax.set_title('3D Facial Mask Points Visualization')
+
+# Show plot
+plt.show()
+
+print(R1, R2)
