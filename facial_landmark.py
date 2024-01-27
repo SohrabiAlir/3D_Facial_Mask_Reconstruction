@@ -41,8 +41,8 @@ c = []
 for i in range(1000):
     c.append([random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)])
 
-r_camera = cv2.imread('data/khodam/C.jpg')
-l_camera = cv2.imread('data/khodam/R.jpg')
+r_camera = cv2.imread('/Users/alirezaamiri/Desktop/1.png')
+l_camera = cv2.imread('/Users/alirezaamiri/Desktop/2.png')
 # Convert the frame to RGB
 rgb_r_camera = cv2.cvtColor(r_camera, cv2.COLOR_BGR2RGB)
 rgb_l_camera = cv2.cvtColor(l_camera, cv2.COLOR_BGR2RGB)
@@ -84,6 +84,7 @@ if l_results.multi_face_landmarks:
 # Display the frame with detected facial landmarks
 output = cv2.resize(l_camera, (int(l_camera.shape[1] * 0.5), int(l_camera.shape[0] * 0.5)))
 cv2.imshow('L', output)
+cv2.waitKey(1000)
 
 
 rc_points = []
@@ -98,3 +99,69 @@ for landmark in l_results.multi_face_landmarks[0].landmark:
 
 
 E = find_essential_matrix(lc_points, rc_points)
+
+
+def decompose_essential_matrix(E):
+    """
+    Decompose the essential matrix into possible rotation and translation matrices.
+
+    Parameters:
+    - E: Essential matrix (3x3 matrix).
+
+    Returns:
+    - Rotation matrices (R1, R2) and translation vector (t).
+    """
+    U, S, Vt = np.linalg.svd(E)
+    W = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]], dtype=float)
+
+    # Two possible rotations
+    R1 = np.dot(U, np.dot(W, Vt))
+    R2 = np.dot(U, np.dot(W.T, Vt))
+
+    # Ensure proper rotation matrix
+    if np.linalg.det(R1) < 0:
+        R1 = -R1
+    if np.linalg.det(R2) < 0:
+        R2 = -R2
+
+    # Translation
+    t = U[:, 2]
+
+    return R1, R2, t
+
+
+def triangulate_points(P1, P2, pts1, pts2):
+    """
+    Triangulate corresponding points from two images with projection matrices.
+
+    Parameters:
+    - P1: Projection matrix for the first camera.
+    - P2: Projection matrix for the second camera.
+    - pts1: Corresponding points in the first image.
+    - pts2: Corresponding points in the second image.
+
+    Returns:
+    - 3D points in homogeneous coordinates.
+    """
+    pts4D = cv2.triangulatePoints(P1, P2, pts1.T, pts2.T)
+    pts3D = pts4D / pts4D[3]
+    return pts3D[:3]
+
+K = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+
+# Find rotation and translation from the essential matrix
+R1, R2, t = decompose_essential_matrix(E)
+
+# Choose the correct R and t here (there are 4 possibilities)
+# This often requires additional constraints or information
+
+# Create projection matrices for the two cameras
+P1 = np.dot(K, np.hstack((np.eye(3), np.zeros((3, 1)))))
+P2 = np.dot(K, np.hstack((R1, t.reshape(3, 1))))  # Replace R1 and t with chosen values
+
+# Convert points to homogeneous coordinates
+pts1_homo = cv2.convertPointsToHomogeneous(np.array(rc_points))
+pts2_homo = cv2.convertPointsToHomogeneous(np.array(lc_points))
+
+# Triangulate points
+points_3D = triangulate_points(P1, P2, pts1_homo, pts2_homo)
