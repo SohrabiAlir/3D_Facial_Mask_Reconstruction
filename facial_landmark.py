@@ -44,8 +44,8 @@ c = []
 for i in range(1000):
     c.append([random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)])
 
-r_camera = cv2.imread('/Users/alirezaamiri/Desktop/11.jpg')
-l_camera = cv2.imread('/Users/alirezaamiri/Desktop/12.jpg')
+r_camera = cv2.imread('IMG_6290.png')
+l_camera = cv2.imread('IMG_6291.png')
 # Convert the frame to RGB
 rgb_r_camera = cv2.cvtColor(r_camera, cv2.COLOR_BGR2RGB)
 rgb_l_camera = cv2.cvtColor(l_camera, cv2.COLOR_BGR2RGB)
@@ -63,6 +63,8 @@ if r_results.multi_face_landmarks:
         x = int(landmark.x * r_camera.shape[1])
         y = int(landmark.y * r_camera.shape[0])
         cv2.circle(r_camera, (x, y), 5, (c[i][0], c[i][1], c[i][2]), -1)
+       
+        
 
 # Display the frame with detected facial landmarks
 output = cv2.resize(r_camera, (int(r_camera.shape[1] * 0.5), int(l_camera.shape[0] * 0.5)))
@@ -99,6 +101,19 @@ lc_points = []
 for landmark in l_results.multi_face_landmarks[0].landmark:
     lc_points.append([landmark.x * l_camera.shape[1],
                       landmark.y * l_camera.shape[0]])
+    
+
+
+indexes = []
+apd_R = []
+apd_L = []
+N = 100
+for i in range(0, 468, 4):
+    indexes.append(random.randint(0, 467))
+    apd_R.append(rc_points[i])
+    apd_L.append(lc_points[i])
+
+#E = find_essential_matrix(apd_R, apd_L)
 
 
 E = find_essential_matrix(lc_points, rc_points)
@@ -152,9 +167,9 @@ def triangulate_points(P1, P2, pts1, pts2):
     pts3D = pts4D / pts4D[3]
     return pts3D[:3]
 
-K = np.array([[964.30008802 ,  0.   ,      643.55286762],
- [  0.   ,      965.53528503, 350.29074919],
- [  0.      ,     0.   ,        1.        ]])
+K = np.array([[3.05447534e+04, 0.00000000e+00, 3.35472082e+02],
+ [0.00000000e+00, 1.74067924e+04, 4.58258041e+02],
+ [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]])
 
 # Find rotation and translation from the essential matrix
 R1, R2, t = decompose_essential_matrix(E)
@@ -194,6 +209,34 @@ ax.set_zlabel('Z Axis')
 ax.set_title('3D Facial Mask Points Visualization')
 
 # Show plot
-plt.show()
+
 
 print(R1, R2)
+
+
+from scipy.spatial import Delaunay
+
+# ... [your existing code for extracting 3D points] ...
+
+# Perform Delaunay triangulation on the 2D projection of 3D points
+# Projecting onto the XY plane (ignoring Z)
+points_2D = np.vstack([X, Y]).T
+tri = Delaunay(points_2D)
+
+# Creating a 3D plot
+fig = plt.figure(figsize=(8, 6))
+ax = fig.add_subplot(111, projection='3d')
+
+# Plotting the triangulated surface
+ax.plot_trisurf(X, Y, Z, triangles=tri.simplices, cmap='viridis')
+
+# Setting labels
+ax.set_xlabel('X Axis')
+ax.set_ylabel('Y Axis')
+ax.set_zlabel('Z Axis')
+
+# Setting title
+ax.set_title('3D Triangulated Facial Surface')
+
+# Show plot
+plt.show()
